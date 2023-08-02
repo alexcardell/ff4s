@@ -63,19 +63,26 @@ lazy val commonDepSettings = Seq(
 )
 
 lazy val root =
-  crossProject(JVMPlatform, JSPlatform, NativePlatform)
-    .crossType(CrossType.Pure)
+  project
     .in(file("."))
     .settings(
       name := "ff4s",
       moduleName := "ff4s"
     )
-    .aggregate(core, fliptJavaSdk, examples)
+    .aggregate(
+      Seq(
+        core,
+        flipt,
+        fliptJavaSdk,
+        examples
+      ).map(_.projectRefs).flatten: _*
+    )
 
 lazy val core =
-  crossProject(JVMPlatform, JSPlatform, NativePlatform)
-    .crossType(CrossType.Pure)
+  projectMatrix
     .in(file("core"))
+    .jvmPlatform(crossVersions)
+    .jsPlatform(crossVersions)
     .configs(IntegrationTest)
     .settings(Defaults.itSettings)
     .settings(commonSettings: _*)
@@ -84,10 +91,32 @@ lazy val core =
       moduleName := "ff4s-core"
     )
 
+lazy val flipt =
+  projectMatrix
+    .in(file("flipt"))
+    .enablePlugins(Smithy4sCodegenPlugin)
+    .jvmPlatform(crossVersions)
+    .jsPlatform(crossVersions)
+    .configs(IntegrationTest)
+    .settings(Defaults.itSettings)
+    .settings(commonSettings: _*)
+    .settings(commonDepSettings: _*)
+    .settings(
+      moduleName := "ff4s-flipt",
+      libraryDependencies ++= Seq(
+        "com.disneystreaming.smithy4s" %%% "smithy4s-core" % smithy4sVersion.value,
+        "com.disneystreaming.smithy4s" %%% "smithy4s-http4s" % smithy4sVersion.value,
+        "com.disneystreaming.alloy" % "alloy-core" % "0.2.3",
+        "com.disneystreaming.smithy" % "smithytranslate-traits" % "0.3.9",
+        "org.http4s" %%% "http4s-ember-client" % "0.23.23"
+      )
+    )
+    .dependsOn(core)
+
 lazy val fliptJavaSdk =
-  crossProject(JVMPlatform)
-    .crossType(CrossType.Pure)
+  projectMatrix
     .in(file("flipt-java-sdk"))
+    .jvmPlatform(crossVersions)
     .configs(IntegrationTest)
     .settings(Defaults.itSettings)
     .settings(commonSettings: _*)
@@ -101,9 +130,9 @@ lazy val fliptJavaSdk =
     .dependsOn(core)
 
 lazy val examples =
-  crossProject(JVMPlatform)
-    .crossType(CrossType.Pure)
+  projectMatrix
     .in(file("examples"))
+    .jvmPlatform(crossVersions)
     .configs(IntegrationTest)
     .settings(commonSettings: _*)
     .settings(commonDepSettings: _*)
@@ -113,7 +142,7 @@ lazy val examples =
         "org.typelevel" %%% "cats-effect" % V.catsEffect
       )
     )
-    .dependsOn(core, fliptJavaSdk)
+    .dependsOn(core, flipt) //, fliptJavaSdk)
 
 addCommandAlias("fix", "scalafixAll; scalafmtAll; scalafmtSbt")
 addCommandAlias("check", "scalafmtCheckAll; scalafmtSbtCheck; scalafix --check")
