@@ -142,7 +142,7 @@ lazy val examples =
         "org.typelevel" %%% "cats-effect" % V.catsEffect
       )
     )
-    .dependsOn(core, flipt) //, fliptJavaSdk)
+    .dependsOn(core, flipt) // , fliptJavaSdk)
 
 addCommandAlias("fix", "scalafixAll; scalafmtAll; scalafmtSbt")
 addCommandAlias("check", "scalafmtCheckAll; scalafmtSbtCheck; scalafix --check")
